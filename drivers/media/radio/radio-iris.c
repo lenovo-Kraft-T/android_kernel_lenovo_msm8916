@@ -1874,11 +1874,6 @@ static int hci_cmd(unsigned int cmd, struct radio_hci_dev *hdev)
 	return hci_cmd_internal(cmd, hdev, 1);
 }
 
-static int hci_cmd_uninterruptible(unsigned int cmd, struct radio_hci_dev *hdev)
-{
-	return hci_cmd_internal(cmd, hdev, 0);
-}
-
 static void radio_hci_req_complete(struct radio_hci_dev *hdev, int result)
 {
 
@@ -5177,32 +5172,17 @@ static int iris_fops_release(struct file *file)
 		return -EINVAL;
 
 	if (radio->mode == FM_OFF)
-		goto END;
+		return 0;
 
 	if (radio->mode == FM_RECV) {
-		radio->is_fm_closing = 1;
-		radio->mode = FM_TURNING_OFF;
-		retval = hci_cmd_uninterruptible(HCI_FM_DISABLE_RECV_CMD,
-				radio->fm_hdev);
 		radio->mode = FM_OFF;
-		radio->is_fm_closing = 0;
+		retval = hci_cmd(HCI_FM_DISABLE_RECV_CMD,
+						radio->fm_hdev);
 	} else if (radio->mode == FM_TRANS) {
-		radio->is_fm_closing = 1;
-		radio->mode = FM_TURNING_OFF;
-		retval = hci_cmd_uninterruptible(HCI_FM_DISABLE_TRANS_CMD,
-				radio->fm_hdev);
 		radio->mode = FM_OFF;
-		radio->is_fm_closing = 0;
-	} else if (radio->mode == FM_CALIB) {
-		radio->mode = FM_OFF;
-		return retval;
+		retval = hci_cmd(HCI_FM_DISABLE_TRANS_CMD,
+					radio->fm_hdev);
 	}
-END:
-	mutex_lock(&fm_smd_enable);
-	if (radio->fm_hdev != NULL)
-		radio->fm_hdev->close_smd();
-	mutex_unlock(&fm_smd_enable);
-
 	if (retval < 0)
 		FMDERR("Err on disable FM %d\n", retval);
 
@@ -5484,7 +5464,6 @@ static int __init iris_probe(struct platform_device *pdev)
 	init_completion(&radio->sync_xfr_start);
 	radio->tune_req = 0;
 	radio->prev_trans_rds = 2;
-	radio->is_fm_closing = 0;
 	init_waitqueue_head(&radio->event_queue);
 	init_waitqueue_head(&radio->read_queue);
 

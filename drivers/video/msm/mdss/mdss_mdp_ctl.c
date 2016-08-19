@@ -196,6 +196,21 @@ u32 mdss_mdp_calc_latency_buf_bytes(bool is_bwc,
 			src_w * bpp * latency_lines,
 			use_latency_buf_percentage ?
 			mdata->latency_buff_per : 0, smp_bytes);
+		if (is_tile) {
+			latency_lines = 8;
+			latency_buf_bytes = src_w * bpp *
+				latency_lines;
+		} else if (is_bwc) {
+			latency_lines = 4;
+			latency_buf_bytes = src_w * bpp *
+				latency_lines;
+		} else {
+			latency_lines = 3;
+			latency_buf_bytes = mdss_mdp_align_latency_buf_bytes(
+				src_w * bpp * latency_lines,
+				use_latency_buf_percentage ?
+				mdata->latency_buff_per : 0, smp_bytes);
+		}
 	}
 
 	return latency_buf_bytes;
